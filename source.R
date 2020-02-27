@@ -207,20 +207,20 @@ rmses <- sapply(lambdas, function(l){
   
   mu <- mean(edx_train$rating)
   
-  b_i <- edx_train %>% 
+  b_m <- edx_train %>% 
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarize(b_m = sum(rating - mu)/(n()+l))
   
   b_u <- edx_train %>% 
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l))
   
   predicted_ratings <- 
     edx_test %>% 
-    left_join(b_i, by = "movieId") %>%
+    left_join(b_m, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
-    mutate(pred = mu + b_i + b_u) %>%
+    mutate(pred = mu + b_m + b_u) %>%
     pull(pred)
   
   return(RMSE(predicted_ratings, edx_test$rating))
@@ -239,28 +239,28 @@ lambda
 #Add genre effect to regularized movie and user model
 l <- lambda
   
-  b_i <- edx_train %>% 
+  b_m <- edx_train %>% 
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarize(b_m = sum(rating - mu)/(n()+l))
   
   b_u <- edx_train %>% 
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l))
  
   b_g <- edx_train %>%
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     left_join(b_u, by="userId") %>%
     group_by(genres) %>%
-    summarize(b_g = mean(rating - b_i - b_u - mu))
+    summarize(b_g = mean(rating - b_m - b_u - mu))
     
     
   predicted_ratings <- 
     edx_test %>% 
-    left_join(b_i, by = "movieId") %>%
+    left_join(b_m, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
     left_join(b_g, by = "genres") %>%
-    mutate(pred = mu + b_i + b_u + b_g) %>%
+    mutate(pred = mu + b_m + b_u + b_g) %>%
     pull(pred)
   
   
@@ -273,10 +273,10 @@ rmse_results %>% knitr::kable()
 # Calculate RMSE on Validation set
 predicted_ratings <- 
   validation %>% 
-  left_join(b_i, by = "movieId") %>%
+  left_join(b_m, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
   left_join(b_g, by = "genres") %>%
-  mutate(pred = mu + b_i + b_u + b_g) %>%
+  mutate(pred = mu + b_m + b_u + b_g) %>%
   pull(pred)
 
 
