@@ -46,7 +46,7 @@ edx <- rbind(edx, removed)
 
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
-Set.seed(1)
+set.seed(1)
 
 #Test set will be 10% of the edx dataset
 #algorithms will be tested on the edx_test set. 
@@ -149,7 +149,7 @@ edx_train %>% mutate(date = as_datetime(timestamp)) %>%
 #naive mean Model
 #calculate mean of all ratings
 mu <- mean(edx_train$rating)
-
+mu
 #predict mean as rating for all movies
 naive_rmse <- RMSE(mu, edx_test$rating)
 naive_rmse
