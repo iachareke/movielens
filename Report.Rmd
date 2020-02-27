@@ -34,7 +34,7 @@ The algorithms developed in this paper are based on the techniques used in the w
 
 ## Problem Definition
 
-This project is based on the MovieLens 10M dataset. This dataset contains 10 million ratings of 10,677 movies by 69,878 people. Clearly, the dataset is sparse as it take about 746 million records if all users rated all movies. The dataset also lacks any information that could provide context about the users which could be important predictors in building an algorithm. eg race, age, sex, location, nationality, language etc.
+This project is based on the MovieLens 10M dataset. This dataset contains 10 million ratings of 10,677 movies by 69,878 people. Clearly, the dataset is sparse as it would take about 746 million records if all users rated all movies. The dataset also lacks any information that could provide context about the users which could be important predictors in building an algorithm. eg race, age, sex, location, nationality, language etc.
 
 We will develop an alogorithm by exploring the different biases that can be indentified in an exploratory analysis of the data and the accuracy of the model will be determined using RMSE. The goal is to develop and algorithm with an RMSE  < 0.86490.
 
@@ -98,7 +98,7 @@ edx <- rbind(edx, removed)
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 ```
 
-To ensure the developement of the model is completely independent of the validation set, the edx set will be further split into training set *edx_train* and test set *edx_test*. The model will be developed based on the edx_train set, tested on the edx_test and the final RMSE will be calculated on the validation set.
+To ensure the developement of the model is completely independent of the validation set, the edx set will be further split into training set *edx_train* and test set *edx_test*. The model will be developed based on the *edx_train* set, tested on the *edx_test* and the final RMSE will be calculated on the *validation* set.
 
 ```{r echo=TRUE, message= FALSE}
 set.seed(1)
@@ -124,12 +124,12 @@ rm(removed, temp, edx_test_index)
 # Methods and Analysis
 
 ## Data Exploration
-To gain a preliminary understanding of the structure of the dataset, we display the first few rows of the edx_train dataset
+To gain a preliminary understanding of the structure of the dataset, we display the first few rows of the *edx_train* dataset
 ```{r echo=FALSE}
 head(edx_train)
 ```
 
-From a review of the distibution of user ratings, it can be seen the users have a tendency to rate movies higher rather than lower. The most common rating is 4 and the leas common is 0.5. Half ratings are generally less common than full ratings
+From a review of the distibution of user ratings, it can be seen the users have a tendency to rate movies higher rather than lower. The most common rating is 4 and the least common is 0.5. Half ratings are generally less common than full ratings
 
 ```{r echo=FALSE, fig.height=3, fig.width=4}
 edx_train %>% group_by(rating) %>% summarize(n= n()) %>%
@@ -225,7 +225,8 @@ edx_train %>% mutate(date = as_datetime(timestamp)) %>%
   summarize(rating = mean(rating)) %>%
   ggplot(aes(date, rating)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() +
+  ggtitle("Movie ratings: Weekly trend")
 ```
 
 There appears to be some effect of time on ratings with ratings declining from 1995 to about 2005 and then rises again
@@ -276,18 +277,18 @@ An RMSE greater than 1 implies our prediction is off by 1 star on the average wh
 
 ### Movie effect model
 
-From real world experiences which is coroborated by our exploratory analysis of the data, the ratings differ from movie to movie. Higer ratings are usually linked to popular movies, block busters and critically acclaimed movies. To incorporate this into out model, we compute the estimated deviation of each movies mean from the overall mean $\mu$. This deviation per movie "m" is called a bias and is added to the model as $b_{m}$, that represents average ranking for movie $i$:
+From real world experiences which is coroborated by our exploratory analysis of the data, the ratings differ from movie to movie. Higher ratings are usually linked to popular movies, block busters and critically acclaimed movies. To incorporate this into out model, we compute the estimated deviation of each movies mean from the overall mean $\mu$. This deviation per movie "m" is called a bias and is added to the model as $b_{m}$, that represents average ranking for movie $i$:
 
-$$Y_{u, i} = \mu +b_{m}+ \epsilon_{u, i}$$
+$$Y_{m} = \mu +b_{m}+ \epsilon_{m}$$
 
-A histogram of the bias $b_{i}$ is shown below:
+A histogram of the bias $b_{m}$ is shown below:
 
-```{r Number_of_movies_with_the computed_b_i, echo = TRUE, fig.height=3, fig.width=4}
+```{r Number_of_movies_with_the computed_b_m, echo = TRUE, fig.height=3, fig.width=4}
 movie_avgs <- edx_train %>%
   group_by(movieId) %>%
   summarize(b_m = mean(rating - mu))
 movie_avgs %>% qplot(b_m, geom ="histogram", bins = 10, data = ., color = I("black"),
-ylab = "Number of movies", main = "Number of movies with the computed b_i")
+ylab = "Number of movies", main = "Number of movies with the computed b_m")
 ```
 
 The plot is skewed to the left, this bias will adjust the ratings of alot of movies to a lower value. We predict using this model on the test set and calculate the RMSE:
@@ -320,7 +321,7 @@ user_avg %>% ggplot(aes(b_u)) + geom_histogram()
 
 There is a marked variability from user to user. The data supports the theory that some users on the average rate higher than others. we can incorporate this bias into the model as follows:
 
-$$Y_{u, i} = \mu + b_{m} + b_{u} + \epsilon_{u, i}$$
+$$Y_{u, m} = \mu + b_{m} + b_{u} + \epsilon_{u, m}$$
 
 where $b_{u}$ is a user-specific effect. Critical users will have a negative $b_{u}$ while "happy" users will have positive $b_{u}$.
 
@@ -348,7 +349,7 @@ rmse_results %>% knitr::kable()
 
 The average rating per movie is affected by movies that have received an extreme rating (very high or very low) by one or a few users. Such ratings cannot be relied upon and unfortunately, RMSE is sensitive to such extreme values. The same principle applies to users who have rated a few movies. To compensate for these effects, we introduce a penalty term Lambda to our model as follows
 
-$$Y_{u, i} = \mu + \frac{1}{\lambda + n_{m}}b_{m} + \frac{1}{\lambda + n_{u}}b_{u} + \epsilon_{u, i}$$
+$$Y_{u, m} = \mu + \frac{1}{\lambda + n_{m}}b_{m} + \frac{1}{\lambda + n_{u}}b_{u} + \epsilon_{u, m}$$
 
 We shall determine the value of $\lambda$ the minimises the RMSE:
 
@@ -360,20 +361,20 @@ rmses <- sapply(lambdas, function(l){
   
   mu <- mean(edx_train$rating)
   
-  b_i <- edx_train %>% 
+  b_m <- edx_train %>% 
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarize(b_m = sum(rating - mu)/(n()+l))
   
   b_u <- edx_train %>% 
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l))
   
   predicted_ratings <- 
     edx_test %>% 
-    left_join(b_i, by = "movieId") %>%
+    left_join(b_m, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
-    mutate(pred = mu + b_i + b_u) %>%
+    mutate(pred = mu + b_m + b_u) %>%
     pull(pred)
   
   return(RMSE(predicted_ratings, edx_test$rating))
@@ -402,27 +403,27 @@ rmse_results %>% knitr::kable()
 
 Form our exploratory analysis, it was observed that some of the variability in movie ratings were explained by the genres. We incorporate this bias into our model as follows:
 
-$$Y_{u, i} = \mu + \frac{1}{\lambda + n_{m}}b_{m} + \frac{1}{\lambda + n_{u}}b_{u} + b_{g} + \epsilon_{u, i}$$
+$$Y_{u, m} = \mu + \frac{1}{\lambda + n_{m}}b_{m} + \frac{1}{\lambda + n_{u}}b_{u} + b_{g} + \epsilon_{u, m}$$
 
 the bias $b_{g}$ is estimated as follows
 
 ```{r}
 l <- lambda
   
-  b_i <- edx_train %>% 
+  b_m <- edx_train %>% 
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l))
+    summarize(b_m = sum(rating - mu)/(n()+l))
   
   b_u <- edx_train %>% 
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_i - mu)/(n()+l))
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l))
  
   b_g <- edx_train %>%
-    left_join(b_i, by="movieId") %>%
+    left_join(b_m, by="movieId") %>%
     left_join(b_u, by="userId") %>%
     group_by(genres) %>%
-    summarize(b_g = mean(rating - b_i - b_u - mu))
+    summarize(b_g = mean(rating - b_m - b_u - mu))
 ```
 
 
@@ -431,10 +432,10 @@ We can now predict using this new model and calulate the RMSE as folllows
 ```{r}
  predicted_ratings <- 
     edx_test %>% 
-    left_join(b_i, by = "movieId") %>%
+    left_join(b_m, by = "movieId") %>%
     left_join(b_u, by = "userId") %>%
     left_join(b_g, by = "genres") %>%
-    mutate(pred = mu + b_i + b_u + b_g) %>%
+    mutate(pred = mu + b_m + b_u + b_g) %>%
     pull(pred)
   
   
@@ -454,10 +455,10 @@ Our data was split into 3. A training set, a test set and a validation set. to o
 ```{r}
 predicted_ratings <- 
   validation %>% 
-  left_join(b_i, by = "movieId") %>%
+  left_join(b_m, by = "movieId") %>%
   left_join(b_u, by = "userId") %>%
   left_join(b_g, by = "genres") %>%
-  mutate(pred = mu + b_i + b_u + b_g) %>%
+  mutate(pred = mu + b_m + b_u + b_g) %>%
   pull(pred)
 
 rmse_v_g <- RMSE(predicted_ratings, validation$rating)
